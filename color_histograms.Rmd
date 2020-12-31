@@ -1,0 +1,100 @@
+---
+title: "color_outliers_plot"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readxl)
+library(cowplot)
+library(scales)
+setwd("C:/Users/Anna/Dropbox/AMP_EGK/Projects/Ch1_RILs/Scripts")
+```
+
+```{r}
+data<-read.table("../ProcessedData/Processed_perflyconc.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+hist(data$c_perfly)
+hist(data$p_perfly)
+hist(data$g_perfly)
+which(data$g_perfly >6) #7
+
+carblist<-read.table("../ProcessedData/carblist_outliers.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+liplist<-read.table("../ProcessedData/liplist_outliers.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+protlist<-read.table("../ProcessedData/protlist_outliers.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+glylist<-read.table("../ProcessedData/glylist_outliers.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+```
+
+```{r}
+#carbohydrates
+dat_carb<-data.frame(data$c_perfly)
+dat_carb$outl<-as.factor((dat_carb[,1]>=0.3095929)*1)
+dat_carb$c_perfly<-dat_carb$data.c_perfly
+
+ggplot(dat_carb, aes(c_perfly, fill=outl)) + 
+    geom_histogram() + labs (x="amt per fly",y="count", title="Carbohydrates, outliers red") + scale_fill_manual(name = "c_perfly", values=c("grey50","red"))+
+  theme(legend.position="none")
+
+#carbohydrates
+dat_carb<-data.frame(data$c_perfly)
+dat_carb$outl<-as.factor((dat_carb[,1]>=0.3095929)*1)
+dat_carb$c_perfly<-dat_carb$data.c_perfly
+
+c_plot<-ggplot(dat_carb, aes(c_perfly, fill=outl)) + 
+    geom_histogram() + labs (x="amt per fly",y="count", title="Carbohydrates, outliers red") + scale_fill_manual(name = "c_perfly", values=c("grey50","red"))+
+  theme(legend.position="none")
+
+#Glycogen
+dat_gly<-data.frame(data$g_perfly)
+dat_gly$outl<-as.factor((dat_gly[,1]>=6.176116)*1) #lowest value on gly outliers list
+dat_gly$g_perfly<-dat_gly$data.g_perfly
+
+g_plot<-ggplot(dat_gly, aes(g_perfly, fill=outl)) + 
+    geom_histogram() + labs (x="amt per fly",y="count", title="Glycogen, outliers red") + scale_fill_manual(name = "g_perfly", values=c("grey50","red"))+
+  theme(legend.position="none")
+
+#Lipids
+dat_lip<-data.frame(data$lperfly)
+dat_lip$outl<-as.factor((dat_lip[,1]>=2.688552)*1) #lowest value on lip outliers list
+dat_lip$l_perfly<-dat_lip$data.lperfly
+
+l_plot<-ggplot(dat_lip, aes(l_perfly, fill=outl)) + 
+    geom_histogram() + labs (x="amt per fly",y="count", title="Lipids, outliers red") + scale_fill_manual(name = "l_perfly", values=c("grey50","red"))+
+  theme(legend.position="none")
+
+#Proteins
+dat_prot<-data.frame(data$p_perfly)
+dat_prot$outl<-as.factor((dat_prot[,1]>=0.004264844)*1) #lowest value on prot outliers list
+dat_prot$p_perfly<-dat_prot$data.p_perfly
+
+p_plot<-ggplot(dat_prot, aes(p_perfly, fill=outl)) + 
+    geom_histogram() + labs (x="amt per fly",y="count", title="Proteins, outliers red") + scale_fill_manual(name = "p_perfly", values=c("grey50","red"))+
+  theme(legend.position="none")
+
+
+
+plot_grid(c_plot,g_plot,l_plot,p_plot,
+          rows=2,
+          cols=2)
+#saved as outliers_plot_supplementary
+```
+
+
+
+scatterplot that works
+```{r , echo=FALSE}
+data<-read.table("../ProcessedData/Processed_perflyconc.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+hist(data$c_perfly)
+data$color="black"
+data$color[data$c_perfly>=0.3095929]="red"
+plot(data$c_perfly,  col=data$color)
+```
+#version of histogram
+test1<-data$c_perfly
+dat1<-data.frame(x=test1, above=test1>=0.3095929)
+qplot(x,data=dat1,geom="histogram",fill=above)
+
+ggplot(dat1)+geom_histogram()+ scale_fill_manual(above)

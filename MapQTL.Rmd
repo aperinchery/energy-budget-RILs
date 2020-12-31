@@ -1,0 +1,497 @@
+---
+title: "qtlMapping"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(readxl)
+library(cowplot)
+library(ggplot2)
+library(zoom)
+
+load(file="../ProcessedData/btw.dat.rda")
+load(file="../ProcessedData/within.dat.rda")
+#load(file="../ProcessedData/p_crt.dat.rda")#protien corrected data
+#load(file="../ProcessedData/pc_totacq.dat.rda")#prot corrected dta
+cbPalette <- c("gray34", "#E69F00", "#009E73") #c, dr, hs
+cbPalette2 <- c("blue", "red", "#000000") #comparisons 
+cbPalette3<- c("seashell3","coral2", "cyan") #PCA
+```
+
+#find peaks
+```{r}
+
+max(within.dat$LOD, na.rm = TRUE) #6.5373
+max(btw.dat$LOD, na.rm = TRUE) #6.953661
+
+
+#subset any values above 6.5
+within_peaks<-subset(within.dat, LOD>="6.5")#one peak
+
+#Filter for specific pea to find CI is made up of 2LOD drop
+within_peaks_CI<-within.dat %>% 
+  select(Position, LOD, Component, Diet) %>%
+  filter(LOD >= "4.5" & Component=="gly" & Diet =="hs")
+#slice out 100 between position 221.5385, row 68065
+find_CI<-slice(within.dat, 67965:68165)
+
+
+#subset any values above 6.5 in between
+btwn_peaks<-subset(btw.dat, LOD>="6.5")# 2 peaks (4 values, but positions are next to each other)
+#Filter for specific pea to find CI is made up of 2LOD drop
+btwn_peaks_CI_carb_c_hs<-btw.dat %>% 
+  select(Position, LOD, Component, Diet) %>%
+  filter(LOD >= "4.9" & Component=="carb" & Diet =="c_hs")
+find_CI_bw_CARB<-slice(within.dat, 12983 :13073)
+
+btwn_peaks_CI_prot_c_hs<-btw.dat %>% 
+  select(Position, LOD, Component, Diet) %>%
+  filter(LOD >= "4.64" & Component=="prot" & Diet =="c_hs")
+find_CI_bw_PROT<-slice(btw.dat, 122860:122960)
+
+```
+
+
+#test if zoom works on jpegs
+#if want to zoo in on specific region, plot specific area??
+#for peak : which max or subset diet or compoent
+
+Libby's comment: Do you see evidence for shared QTL for any components?
+
+Visually, yes. Esp in Gly (2L) and Prot (x chr). AND Carb(x chr) for Between Diets plots
+
+Note: Discuss w Libby
+-How would I confirm that statistically?
+-How would i search or zoom in in R for confirmation?
+-Would i need to have other plots to show this?
+-Would I need a table?
+```{r carb}
+top <-max(within.dat$LOD)
+line.ww <-1
+sub.dat <- within.dat[within.dat$Component=='carb',]
+
+#for colors<- control, dr, hs
+g1 <- ggplot(sub.dat, aes(x=Position, y=LOD,color=Diet))+
+  geom_rect(xmin=66.3,ymin=-10,xmax=120.3,ymax=top+10,fill='grey80',color='grey80')+
+  geom_rect(xmin=174,ymin=-10,xmax=221,ymax=top+10,fill='grey80',color='grey80')+
+  geom_line(size=line.ww,alpha=0.60)+
+  scale_x_continuous(breaks=c(0,66.3,120,174,221,277,33.15,98.3,145,205,249), 
+                     labels=c(0,"66  0",54,"108 0",47,103,'\nX','\n2L','\n2R','\n3L','\n3R'))+
+  scale_colour_manual(values=cbPalette) +
+  theme(axis.ticks.x=element_blank())+
+  ylab("LOD")+
+  xlab("Position (cM)")+
+  labs(title="CARBOHYDRATE")+
+  expand_limits(y=c(0,11))+ scale_y_continuous(breaks=seq(0,11,3)) +
+  geom_hline(yintercept = 10, color='blue')  +
+    geom_hline(yintercept = 10, color='blue') + 
+  geom_hline(yintercept= 6.5, color= 'red')+
+    annotate("text", min(sub.dat$Position), 9, label = "        LOD=10")+
+    annotate("text", min(sub.dat$Position), 5.5, label = "        LOD=6.5")
+
+g1
+ggsave(g1, file='../Plots/carb_QTL_wLabel.png')
+
+```
+
+##lip
+```{r pressure, echo=FALSE}
+top <-max(within.dat$LOD)
+line.ww <-1
+sub.dat <- within.dat[within.dat$Component=='lip',]
+
+g2 <- ggplot(sub.dat, aes(x=Position, y=LOD,color=Diet))+
+  geom_rect(xmin=66.3,ymin=-10,xmax=120.3,ymax=top+10,fill='grey80',color='grey80')+
+  geom_rect(xmin=174,ymin=-10,xmax=221,ymax=top+10,fill='grey80',color='grey80')+
+  geom_line(size=line.ww,alpha=0.6)+
+  scale_x_continuous(breaks=c(0,66.3,120,174,221,277,33.15,98.3,145,205,249), 
+                     labels=c(0,"66  0",54,"108  0",47,103,'\nX','\n2L','\n2R','\n3L','\n3R'))+
+   scale_colour_manual(values=cbPalette) +
+  theme(axis.ticks.x=element_blank())+
+  ylab("LOD")+
+  xlab("Position (cM)")+
+  labs(title="LIPID")+
+  expand_limits(y=c(0,11))+ scale_y_continuous(breaks=seq(0,11,3))+ 
+    geom_hline(yintercept = 10, color='blue')  + 
+    geom_hline(yintercept= 6.5, color= 'red')+
+    annotate("text", min(sub.dat$Position), 9, label = "        LOD=10")+
+    annotate("text", min(sub.dat$Position), 5.5, label = "        LOD=6.5")
+
+g2
+
+ggsave(g2, file='../Plots/lip_QTL_wLabel.png')
+#ggsave(g2, file='../ProcessedData/ScanResults/lip_test_withLabel.png')
+
+```
+
+
+```{r}
+top <-max(within.dat$LOD)
+line.ww <-1
+sub.dat <- within.dat[within.dat$Component=='gly',]
+
+g3 <- ggplot(sub.dat, aes(x=Position, y=LOD,color=Diet))+
+  geom_rect(xmin=66.3,ymin=-10,xmax=120.3,ymax=top+10,fill='grey80',color='grey80')+
+  geom_rect(xmin=174,ymin=-10,xmax=221,ymax=top+10,fill='grey80',color='grey80')+
+  geom_line(size=line.ww,alpha=0.6)+
+  scale_x_continuous(breaks=c(0,66.3,120,174,221,277,33.15,98.3,145,205,249), 
+                     labels=c(0,"66  0",54,"108  0",47,103,'\nX','\n2L','\n2R','\n3L','\n3R'))+
+   scale_colour_manual(values=cbPalette) +
+  theme(axis.ticks.x=element_blank())+
+  ylab("LOD")+
+  xlab("Position (cM)")+
+  labs(title="GLYCOGEN")+
+  expand_limits(y=c(0,11))+ scale_y_continuous(breaks=seq(0,11,3))+ 
+    geom_hline(yintercept = 10, color='blue')  + 
+    geom_hline(yintercept= 6.5, color= 'red')+
+    annotate("text", min(sub.dat$Position), 9, label = "        LOD=10")+
+    annotate("text", min(sub.dat$Position), 5.5, label = "        LOD=6.5")
+
+#g3
+
+#ggsave(g3, file='../ProcessedData/ScanResults/gly_test.pdf',width=8, height=4)
+ggsave(g3, file='../Plots/gly_QTL_wLabel.png')
+
+```
++ 
+    geom_hline(yintercept = 10, color='blue')  + 
+    annotate("text", min(sub.dat$Position), 9, label = "      LOD=10")
+
+
+#test if zoom works on jpegs
+#if want to zoo in on specific region, plot specific area??
+#for peak : which max or subset diet or compoent
+
+Libby's comment: Do you see evidence for shared QTL for any components?
+
+Visually, yes. Esp in Gly (2L) and Prot (x chr). AND Carb(x chr) for Between Diets plots
+
+Note: Discuss w Libby
+-How would I confirm that statistically?
+-How would i search or zoom in in R for confirmation?
+-Would i need to have other plots to show this?
+-Would I need a table?
+```{r}
+top <-max(within.dat$LOD)
+line.ww <-1
+sub.dat <- within.dat[within.dat$Component=='prot',]
+
+g4 <- ggplot(sub.dat, aes(x=Position, y=LOD,color=Diet))+
+  geom_rect(xmin=66.3,ymin=-10,xmax=120.3,ymax=top+10,fill='grey80',color='grey80')+
+  geom_rect(xmin=174,ymin=-10,xmax=221,ymax=top+10,fill='grey80',color='grey80')+
+  geom_line(size=line.ww,alpha=0.6)+
+  scale_x_continuous(breaks=c(0,66.3,120,174,221,277,33.15,98.3,145,205,249), 
+                     labels=c(0,"66  0",54,"108  0",47,103,'\nX','\n2L','\n2R','\n3L','\n3R'))+
+ scale_colour_manual(values=cbPalette) +
+  theme(axis.ticks.x=element_blank())+
+  ylab("LOD")+
+  xlab("Position (cM)")+
+  labs(title="PROTEIN")+
+  expand_limits(y=c(0,11))+ scale_y_continuous(breaks=seq(0,11,3))+ 
+    geom_hline(yintercept = 10, color='blue')  + 
+    geom_hline(yintercept= 6.5, color= 'red')+
+    annotate("text", min(sub.dat$Position), 9, label = "        LOD=10")+
+    annotate("text", min(sub.dat$Position), 5.5, label = "        LOD=6.5")
+
+g4
+
+#ggsave(g4, file='../ProcessedData/ScanResults/prot_test.pdf',path = NULL,width=8, height=4)
+ggsave(g4, file='../Plots/prot_QTL_wLabel.png')
+
+#all_carb[which.max(all_carb$c_carb),]
+```
+
+
+```{r}
+#combined_QTL<-plot_grid(g1, g2, g3, g4)
+#ggsave(combined_QTL, file='../Plots/combined_QTL.pdf',width=8, height=4)
+#ggsave(combined_QTL, file='../Plots/combined_QTL.png')
+
+```
+
+
+```{r carb}
+top <-max(btw.dat$LOD)
+line.ww <-1
+sub.dat <- btw.dat[btw.dat$Component=='carb',]
+#cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+g5<- ggplot(sub.dat, aes(x=Position, y=LOD,color=Diet))+
+  geom_rect(xmin=66.3,ymin=-10,xmax=120.3,ymax=top+10,fill='grey80',color='grey80')+
+  geom_rect(xmin=174,ymin=-10,xmax=221,ymax=top+10,fill='grey80',color='grey80')+
+  geom_line(size=line.ww,alpha=0.6)+
+  scale_x_continuous(breaks=c(0,66.3,120,174,221,277,33.15,98.3,145,205,249), 
+                     labels=c(0,"66  0",54,"108  0",47,103,'\nX','\n2L','\n2R','\n3L','\n3R'))+
+  scale_colour_manual(values=cbPalette2) +
+  theme(axis.ticks.x=element_blank())+
+  ylab("LOD")+
+  xlab("Position (cM)")+ 
+  labs(title="CARBOHYDRATE")+
+  expand_limits(y=c(0,11))+ scale_y_continuous(breaks=seq(0,11,3))+ 
+    geom_hline(yintercept = 10, color='blue')  + 
+    geom_hline(yintercept= 6.5, color= 'red')+
+    annotate("text", min(sub.dat$Position), 9, label = "        LOD=10")+
+    annotate("text", min(sub.dat$Position), 7.5, label = "        LOD=6.5")
+
+#ggsave(g5, file='../ProcessedData/ScanResults/carbpair_test.pdf',width=8, height=4)
+ggsave(g5, file='../Plots/carb_bwQTL_wLabel.png')
+```
+
+##lip
+```{r pressure, echo=FALSE}
+top <-max(btw.dat$LOD)
+line.ww <-1
+sub.dat <- btw.dat[btw.dat$Component=='lip',]
+
+g6 <- ggplot(sub.dat, aes(x=Position, y=LOD,color=Diet))+
+  geom_rect(xmin=66.3,ymin=-10,xmax=120.3,ymax=top+10,fill='grey80',color='grey80')+
+  geom_rect(xmin=174,ymin=-10,xmax=221,ymax=top+10,fill='grey80',color='grey80')+
+  geom_line(size=line.ww,alpha=0.6)+
+  scale_x_continuous(breaks=c(0,66.3,120,174,221,277,33.15,98.3,145,205,249), 
+                     labels=c(0,"66  0",54,"108  0",47,103,'\nX','\n2L','\n2R','\n3L','\n3R'))+
+   scale_colour_manual(values=cbPalette2) +
+  theme(axis.ticks.x=element_blank())+
+  ylab("LOD")+
+  xlab("Position (cM)")+
+  labs(title="LIPID")+
+  expand_limits(y=c(0,11))+ scale_y_continuous(breaks=seq(0,11,3))+
+  geom_hline(yintercept = 10, color='blue')  + 
+    geom_hline(yintercept= 6.5, color= 'red')+
+    annotate("text", min(sub.dat$Position), 9, label = "        LOD=10")+
+    annotate("text", min(sub.dat$Position), 5.5, label = "        LOD=6.5")
+
+
+#ggsave(g6, file='../ProcessedData/ScanResults/lippair_test.pdf',width=8, height=4)
+ggsave(g6, file='../Plots/lip_bwQTL_wLabel.png')
+
+```
+
+
+```{r}
+top <-max(btw.dat$LOD)
+line.ww <-1
+sub.dat <- btw.dat[btw.dat$Component=='gly',]
+
+g7 <- ggplot(sub.dat, aes(x=Position, y=LOD,color=Diet))+
+  geom_rect(xmin=66.3,ymin=-10,xmax=120.3,ymax=top+10,fill='grey80',color='grey80')+
+  geom_rect(xmin=174,ymin=-10,xmax=221,ymax=top+10,fill='grey80',color='grey80')+
+  geom_line(size=line.ww,alpha=0.6)+
+  scale_x_continuous(breaks=c(0,66.3,120,174,221,277,33.15,98.3,145,205,249), 
+                     labels=c(0,"66  0",54,"108  0",47,103,'\nX','\n2L','\n2R','\n3L','\n3R'))+
+   scale_colour_manual(values=cbPalette2) +
+  theme(axis.ticks.x=element_blank())+
+  ylab("LOD")+
+  xlab("Position (cM)")+ 
+  labs(title="GLYCOGEN")+
+  expand_limits(y=c(0,11))+ scale_y_continuous(breaks=seq(0,11,3))+
+  geom_hline(yintercept = 10, color='blue')  + 
+    geom_hline(yintercept= 6.5, color= 'red')+
+    annotate("text", min(sub.dat$Position), 9, label = "        LOD=10")+
+    annotate("text", min(sub.dat$Position), 5.5, label = "        LOD=6.5")
+
+#ggsave(g7, file='../ProcessedData/ScanResults/glypair_test.pdf',width=8, height=4)
+ggsave(g7, file='../Plots/gly_bwQTL_wLabel.png')
+
+```
+
+
+```{r}
+top <-max(btw.dat$LOD)
+line.ww <-1
+sub.dat <- btw.dat[btw.dat$Component=='prot',]
+
+g8 <- ggplot(sub.dat, aes(x=Position, y=LOD,color=Diet))+
+  geom_rect(xmin=66.3,ymin=-10,xmax=120.3,ymax=top+10,fill='grey80',color='grey80')+
+  geom_rect(xmin=174,ymin=-10,xmax=221,ymax=top+10,fill='grey80',color='grey80')+
+  geom_line(size=line.ww,alpha=0.6)+
+  scale_x_continuous(breaks=c(0,66.3,120,174,221,277,33.15,98.3,145,205,249), 
+                     labels=c(0,"66  0",54,"108  0",47,103,'\nX','\n2L','\n2R','\n3L','\n3R'))+
+ scale_colour_manual(values=cbPalette2) +
+  theme(axis.ticks.x=element_blank())+
+  ylab("LOD")+
+  xlab("Position (cM)")+
+  labs(title="PROTIEN")+
+  expand_limits(y=c(0,11))+ scale_y_continuous(breaks=seq(0,11,3))+
+  geom_hline(yintercept = 10, color='blue')  + 
+    geom_hline(yintercept= 6.5, color= 'red')+
+    annotate("text", min(sub.dat$Position), 9, label = "        LOD=10")+
+    annotate("text", min(sub.dat$Position), 5.5, label = "        LOD=6.5")
+
+
+#ggsave(g8, file='../ProcessedData/ScanResults/protpair_test.pdf',path = NULL,width=8, height=4)
+ggsave(g8, file='../Plots/prot_bwQTL_wLabel.png')
+
+```
+
+
+```{r}
+#combined_QTL_bwDIET<-plot_grid(g5, g6, g7, g8)
+#ggsave(combined_QTL_bwDIET, file='../Plots/combined_QTL_bwDIET.pdf',width=8, height=4)
+#ggsave(combined_QTL_bwDIET, file='../Plots/combined_QTL_bwDIET.png')
+
+```
+
+
+##Protien correction
+#change colors of diet.
+```{r}
+top <-max(p_crt.dat$LOD)
+line.ww <-1
+sub.dat <- p_crt.dat[p_crt.dat$Component=='carb',]
+
+g9 <- ggplot(sub.dat, aes(x=Position, y=LOD,color=Diet))+
+  geom_rect(xmin=66.3,ymin=-10,xmax=120.3,ymax=top+10,fill='grey80',color='grey80')+
+  geom_rect(xmin=174,ymin=-10,xmax=221,ymax=top+10,fill='grey80',color='grey80')+
+  geom_line(size=line.ww,alpha=0.65)+
+  scale_x_continuous(breaks=c(0,66.3,120,174,221,277,33.15,98.3,145,205,249), 
+                     labels=c(0,"66  0",54,"108  0",47,103,'\nX','\n2L','\n2R','\n3L','\n3R'))+
+ scale_colour_manual(values=cbPalette) +
+  theme(axis.ticks.x=element_blank())+
+  ylab("LOD")+
+  xlab("Position (cM)")+ expand_limits(y=c(0,11))+ scale_y_continuous(breaks=seq(0,11,3))
+
+
+#ggsave(g9, file='../ProcessedData/ScanResults/carb_p_crt_test.pdf',path = NULL,width=8, height=4)
+#ggsave(g9, file='../ProcessedData/ScanResults/carb_p_crt_test.png')
+
+```
+
+#run from here on out
+```{r}
+top <-max(p_crt.dat$LOD)
+line.ww <-1
+sub.dat <- p_crt.dat[p_crt.dat$Component=='gly',]
+
+g10 <- ggplot(sub.dat, aes(x=Position, y=LOD,color=Diet))+
+  geom_rect(xmin=66.3,ymin=-10,xmax=120.3,ymax=top+10,fill='grey80',color='grey80')+
+  geom_rect(xmin=174,ymin=-10,xmax=221,ymax=top+10,fill='grey80',color='grey80')+
+  geom_line(size=line.ww,alpha=0.65)+
+  scale_x_continuous(breaks=c(0,66.3,120,174,221,277,33.15,98.3,145,205,249), 
+                     labels=c(0,"66  0",54,"108  0",47,103,'\nX','\n2L','\n2R','\n3L','\n3R'))+
+ scale_colour_manual(values=cbPalette) +
+  theme(axis.ticks.x=element_blank())+
+  ylab("LOD")+
+  xlab("Position (cM)")+ expand_limits(y=c(0,11))+ scale_y_continuous(breaks=seq(0,11,3))
+
+
+#ggsave(g10, file='../ProcessedData/ScanResults/gly_p_crt_test.pdf',path = NULL,width=8, height=4)
+#ggsave(g10, file='../ProcessedData/ScanResults/gly_p_crt_test.png')
+
+```
+
+```{r}
+top <-max(p_crt.dat$LOD)
+line.ww <-1
+sub.dat <- p_crt.dat[p_crt.dat$Component=='lip',]
+
+g11 <- ggplot(sub.dat, aes(x=Position, y=LOD,color=Diet))+
+  geom_rect(xmin=66.3,ymin=-10,xmax=120.3,ymax=top+10,fill='grey80',color='grey80')+
+  geom_rect(xmin=174,ymin=-10,xmax=221,ymax=top+10,fill='grey80',color='grey80')+
+  geom_line(size=line.ww,alpha=0.65)+
+  scale_x_continuous(breaks=c(0,66.3,120,174,221,277,33.15,98.3,145,205,249), 
+                     labels=c(0,"66  0",54,"108  0",47,103,'\nX','\n2L','\n2R','\n3L','\n3R'))+
+ scale_colour_manual(values=cbPalette) +
+  theme(axis.ticks.x=element_blank())+
+  ylab("LOD")+
+  xlab("Position (cM)")+ expand_limits(y=c(0,11))+ scale_y_continuous(breaks=seq(0,11,3))
+
+#g11
+
+#ggsave(g11, file='../ProcessedData/ScanResults/lip_p_crt_test.pdf',path = NULL,width=8, height=4)
+#ggsave(g11, file='../ProcessedData/ScanResults/lip_p_crt_test.png')
+
+```
+
+```{r}
+top <-max(p_crt.dat$LOD)
+line.ww <-1
+sub.dat <- p_crt.dat[p_crt.dat$Component=='prot',]
+
+g12 <- ggplot(sub.dat, aes(x=Position, y=LOD,color=Diet))+
+  geom_rect(xmin=66.3,ymin=-10,xmax=120.3,ymax=top+10,fill='grey80',color='grey80')+
+  geom_rect(xmin=174,ymin=-10,xmax=221,ymax=top+10,fill='grey80',color='grey80')+
+  geom_line(size=line.ww,alpha=0.65)+
+  scale_x_continuous(breaks=c(0,66.3,120,174,221,277,33.15,98.3,145,205,249), 
+                     labels=c(0,"66  0",54,"108  0",47,103,'\nX','\n2L','\n2R','\n3L','\n3R'))+
+ scale_colour_manual(values=cbPalette) +
+  theme(axis.ticks.x=element_blank())+
+  ylab("LOD")+
+  xlab("Position (cM)")+ expand_limits(y=c(0,11))+ scale_y_continuous(breaks=seq(0,11,3))
+
+#g12
+
+#ggsave(g12, file='../ProcessedData/ScanResults/prot_fromp_crt_test.pdf',path = NULL,width=8, height=4)
+#ggsave(g12, file='../ProcessedData/ScanResults/prot_fromp_crt_test.png')
+```
+
+```{r}
+top <-max(pc_totacq.dat$LOD)
+line.ww <-1
+sub.dat <- pc_totacq.dat[pc_totacq.dat$Component=='PC1',]
+
+g13 <- ggplot(sub.dat, aes(x=Position, y=LOD,color=Diet))+
+  geom_rect(xmin=66.3,ymin=-10,xmax=120.3,ymax=top+10,fill='grey80',color='grey80')+
+  geom_rect(xmin=174,ymin=-10,xmax=221,ymax=top+10,fill='grey80',color='grey80')+
+  geom_line(size=line.ww,alpha=0.65)+
+  scale_x_continuous(breaks=c(0,66.3,120,174,221,277,33.15,98.3,145,205,249), 
+                     labels=c(0,"66  0",54,"108  0",47,103,'\nX','\n2L','\n2R','\n3L','\n3R'))+
+ scale_colour_manual(values=cbPalette) +
+  theme(axis.ticks.x=element_blank())+
+  ylab("LOD")+
+  xlab("Position (cM)")+ expand_limits(y=c(0,11))+ scale_y_continuous(breaks=seq(0,11,3))
+
+g13
+
+#ggsave(g13, file='../ProcessedData/ScanResults/PC1_test.pdf',path = NULL,width=8, height=4)
+ggsave(g13, file='../ProcessedData/ScanResults/PC1_test.png')
+```
+
+```{r}
+top <-max(pc_totacq.dat$LOD)
+line.ww <-1
+sub.dat <- pc_totacq.dat[pc_totacq.dat$Component=='PC2',]
+
+g14 <- ggplot(sub.dat, aes(x=Position, y=LOD,color=Diet))+
+  geom_rect(xmin=66.3,ymin=-10,xmax=120.3,ymax=top+10,fill='grey80',color='grey80')+
+  geom_rect(xmin=174,ymin=-10,xmax=221,ymax=top+10,fill='grey80',color='grey80')+
+  geom_line(size=line.ww,alpha=0.65)+
+  scale_x_continuous(breaks=c(0,66.3,120,174,221,277,33.15,98.3,145,205,249), 
+                     labels=c(0,"66  0",54,"108  0",47,103,'\nX','\n2L','\n2R','\n3L','\n3R'))+
+ scale_colour_manual(values=cbPalette) +
+  theme(axis.ticks.x=element_blank())+
+  ylab("LOD")+
+  xlab("Position (cM)")+ expand_limits(y=c(0,11))+ scale_y_continuous(breaks=seq(0,11,3))
+
+g14
+
+#ggsave(g14, file='../ProcessedData/ScanResults/PC2_test.pdf',path = NULL,width=8, height=4)
+ggsave(g14, file='../ProcessedData/ScanResults/PC2_test.png')
+
+```
+
+```{r}
+top <-max(pc_totacq.dat$LOD)
+line.ww <-1
+sub.dat <- pc_totacq.dat[pc_totacq.dat$Component=='tot_acq',]
+
+g15 <- ggplot(sub.dat, aes(x=Position, y=LOD,color=Diet))+
+  geom_rect(xmin=66.3,ymin=-10,xmax=120.3,ymax=top+10,fill='grey80',color='grey80')+
+  geom_rect(xmin=174,ymin=-10,xmax=221,ymax=top+10,fill='grey80',color='grey80')+
+  geom_line(size=line.ww,alpha=0.65)+
+  scale_x_continuous(breaks=c(0,66.3,120,174,221,277,33.15,98.3,145,205,249), 
+                     labels=c(0,"66  0",54,"108  0",47,103,'\nX','\n2L','\n2R','\n3L','\n3R'))+
+ scale_colour_manual(values=cbPalette) +
+  theme(axis.ticks.x=element_blank())+
+  ylab("LOD")+
+  xlab("Position (cM)")+ expand_limits(y=c(0,11))+ scale_y_continuous(breaks=seq(0,11,3))
+
+g15
+
+#ggsave(g15, file='../ProcessedData/ScanResults/totacq_test.pdf',path = NULL,width=8, height=4)
+ggsave(g15, file='../ProcessedData/ScanResults/totacq_test.png')
+
+```

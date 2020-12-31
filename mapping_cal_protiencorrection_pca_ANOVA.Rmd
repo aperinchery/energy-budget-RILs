@@ -1,0 +1,255 @@
+---
+title: "mapping_calories_protiencorrection_pca"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readxl)
+library(cowplot)
+library(ggplot2)
+library(ggpubr)
+library(dplyr)
+library(plyr)
+library(multcomp)
+library(forcats)
+setwd("C:/Users/Anna/Dropbox/AMP_EGK/Projects/Ch1_RILs/Scripts")
+```
+
+
+```{r cars}
+carb<-read.table("../ProcessedData/carb_cal.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+lip<-read.table("../ProcessedData/lip_cal.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+prot<-read.table("../ProcessedData/prot_cal.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+gly<-read.table("../ProcessedData/gly_cal.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+#these datasets have macromolecule split by diet, issues in both calories and grams (mg?)
+#do I need a total acquisition column
+```
+
+can use  "map_cal.txt" here 
+
+#protien correction. 
+Only run if necessary. Protein correction not used in following calculations.
+
+carb$c_carb_p_crt<-(carb$c_carb/prot$c_prot)
+carb$dr_carb_p_crt<-(carb$dr_carb/prot$dr_prot)
+carb$hs_carb_p_crt<-(carb$hs_carb/prot$hs_prot)
+
+gly$c_gly_p_crt<-(gly$c_gly/prot$c_prot)
+gly$dr_gly_p_crt<-(gly$dr_gly/prot$dr_prot)
+gly$hs_gly_p_crt<-(gly$hs_gly/prot$hs_prot)
+
+lip$c_lip_p_crt<-(lip$c_lip/prot$c_prot)
+lip$dr_lip_p_crt<-(lip$dr_lip/prot$dr_prot)
+lip$hs_lip_p_crt<-(lip$hs_lip/prot$hs_prot)
+
+write.table(prot, "../ProcessedData/prot_map_cal.txt", sep="\t")
+write.table(carb, "../ProcessedData/carb_map_cal.txt", sep="\t")
+write.table(gly, "../ProcessedData/gly_map_cal.txt", sep="\t")
+write.table(lip, "../ProcessedData/lip_map_cal.txt", sep="\t")
+
+#############
+control_tot_acq<- read.table("../ProcessedData/Control_tot_acq.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+dr_tot_acq<- read.table("../ProcessedData/DR_tot_acq.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+hs_tot_acq<- read.table("../ProcessedData/HS_tot_acq.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+hs_tot_acq[which(hs_tot_acq$RIL %in% carblist$RIL),]
+ctrl_test<-control_tot_acq[complete.cases(control_tot_acq), ] #columns w NA removed. 
+
+
+#PCA's
+```{r}
+all_molec<-read.table("../ProcessedData/all_flies_proccessed_checked.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+all_molec$RIL<-gsub("[^[:digit:]]", "", all_molec$Line)#Make RIL column
+all_molec$Treat<-gsub("[[:digit:]]","",all_molec$Line)#Make Treatment column
+
+
+C_diet<-subset(all_molec, Treat=="C")
+DR_diet<-subset(all_molec, Treat=="DR")
+HS_diet<-subset(all_molec, Treat=="HS")
+C_diet<-C_diet[complete.cases(C_diet), ] #columns w NA removed. 
+DR_diet<-DR_diet[complete.cases(DR_diet), ] #columns w NA removed. 
+HS_diet<-HS_diet[complete.cases(HS_diet), ] #columns w NA removed. 
+length(unique(c(C_diet$RIL, DR_diet$RIL, HS_diet$RIL)))
+
+control_pca <- prcomp(~ c_perfly + lperfly +p_perfly+ g_perfly, data = C_diet, center = TRUE, scale. = TRUE)
+summary(control_pca)
+print(control_pca)
+
+
+
+PCB_control<-data.frame(control_pca$x,RIL=C_diet$RIL)
+
+dr_pca <- prcomp(~ c_perfly + lperfly +p_perfly+ g_perfly, data = DR_diet, center = TRUE, scale. = TRUE)
+summary(dr_pca)
+print(dr_pca)
+PCB_dr<-data.frame(dr_pca$x,RIL=DR_diet$RIL)
+
+hs_pca <- prcomp(~ c_perfly + lperfly +p_perfly+ g_perfly, data = HS_diet, center = TRUE, scale. = TRUE)
+summary(hs_pca)
+print(hs_pca)
+PCB_hs<-data.frame(hs_pca$x,RIL=HS_diet$RIL)
+
+#rename columns
+PCB_dr<-rename(PCB_dr, c("PC1"="dr_PC1", "PC2"="dr_PC2","PC3"="dr_PC3","PC4"="dr_PC4"))
+PCB_control<-rename(PCB_control, c("PC1"="ctl_PC1", "PC2"="ctl_PC2","PC3"="ctl_PC3","PC4"="ctl_PC4"))
+PCB_hs<-rename(PCB_hs, c("PC1"="hs_PC1", "PC2"="hs_PC2","PC3"="hs_PC3","PC4"="hs_PC4"))
+
+
+#merge
+ctl_dr<-join(PCB_control, PCB_dr, by="RIL", type="full")
+all_tx<-join(ctl_dr, PCB_hs, by="RIL", type="full")
+```
+
+PC <- data.frame(pc1 = total_acq_PCA$x[, 1],
+                 pc2 = total_acq_PCA$x[, 2])
+
+pc_plot <- ggplot(PC, aes(pc1, pc2)) +
+  geom_vline(xintercept = 0, color = "red", size = 1.5) +
+  geom_hline(yintercept = 0, color = "red", size = 1.5) +
+  geom_point() +
+  coord_fixed()
+print(pc_plot)
+
+```{r}
+#write dataframe
+write.table(all_tx, "../ProcessedData/dat_for_pcamap.txt", sep="\t")
+
+```
+
+#read above --> 
+carb<-read.table("../ProcessedData/carb_cal.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+lip<-read.table("../ProcessedData/lip_cal.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+prot<-read.table("../ProcessedData/prot_cal.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+gly<-read.table("../ProcessedData/gly_cal.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+
+###ANOVAs
+```{r}
+carb<-read.table("../ProcessedData/all_carb_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+lip<-read.table("../ProcessedData/all_lip_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+prot<-read.table("../ProcessedData/all_prot_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+gly<-read.table("../ProcessedData/all_gly_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+```
+
+#start here
+```{r}
+dat<-read.table("../ProcessedData/all_carb_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+carbalt<-data.frame('value'=c(dat[,'dr_carb'],dat[,'c_carb'],dat[,'hs_carb']),'treatment'=rep(c('dr','c', 'hs'),each=nrow(dat)), 'RIL'=rep(c(dat[,'RIL'])))
+
+hist(carbalt$value)
+carbalt$carb_T<-(carbalt$value^1/2) 
+
+carbalt<- carbalt %>% mutate(treatment=fct_inorder(carbalt$treatment, ordered=NA))
+
+p1a<-ggplot(data=carbalt, aes(x = treatment, y=value, color=as.factor(RIL))) +
+  geom_point()+
+   geom_line(aes(group = paste(as.factor(RIL)), alpha = 0.2))+
+  theme(legend.position="none")+
+  ylab("amount (mg/fly)")+
+  stat_summary(fun.y = mean, geom = "point", size = 3, color = "black")
+
+p1a
+ggsave(p1a, file='carb_amt.pdf',width=8, height=4)
+
+
+carblm<-lm(value~ treatment, data=carbalt)
+summary(carblm)
+anova(carblm)
+
+#post hoc testing:
+tukeyc <- glht(carblm, linfct = mcp(treatment = "Tukey"))
+summary(tukeyc)
+plot(tukeyc)
+
+```
+#post_hoc <- glht(carblm,mcp(Treatment = c("hs - c == 0", "hs - dr == 0")))
+#summary(post_hoc)
+
+```{r}
+dat<-read.table("../ProcessedData/all_lip_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+lipalt<-data.frame('value'=c(dat[,'dr_lip'],dat[,'c_lip'],dat[,'hs_lip']),'treatment'=rep(c('dr','c', 'hs'),each=nrow(dat)), 'RIL'=rep(c(dat[,'RIL'])))
+
+lipalt<- lipalt%>% mutate(treatment=fct_inorder(lipalt$treatment, ordered=NA))
+
+
+p2a<-ggplot(data=lipalt, aes(x = treatment, y=value, color=as.factor(RIL))) +
+  geom_point()+
+  geom_line(aes(group = paste(as.factor(RIL)), alpha = 0.2))+
+  theme(legend.position="none")+
+  ylab("amount (mg/fly)")+
+  stat_summary(fun.y = mean, geom = "point", size = 3, color = "black")
+
+p2a
+ggsave(p2a, file='lip_amt.pdf',width=8, height=4)
+
+liplm<-lm(value~ treatment, data=lipalt)
+summary(liplm)
+anova(liplm)
+
+tukeyl <- glht(liplm, linfct = mcp(treatment = "Tukey"))
+summary(tukeyl)
+plot(tukeyl)
+```
+
+
+```{r}
+dat<-read.table("../ProcessedData/all_prot_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+protalt<-data.frame('value'=c(dat[,'dr_prot'],dat[,'c_prot'],dat[,'hs_prot']),'treatment'=rep(c('dr','c', 'hs'),each=nrow(dat)), 'RIL'=rep(c(dat[,'RIL'])))
+
+protalt<- protalt%>% mutate(treatment=fct_inorder(protalt$treatment, ordered=NA))
+
+p3a<-ggplot(data=protalt, aes(x = treatment, y=value, color=as.factor(RIL))) +
+  geom_point()+
+  geom_line(aes(group = paste(as.factor(RIL)), alpha = 0.2))+
+  theme(legend.position="none")+
+  ylab("amount (mg/fly)")+
+  stat_summary(fun.y = mean, geom = "point", size = 3, color = "black")
+
+p3a
+ggsave(p3a, file='prot_amt.pdf',width=8, height=4)
+
+protlm<-lm(value~ treatment, data=protalt)
+summary(protlm)
+anova(protlm)
+tukeyp <- glht(protlm, linfct = mcp(treatment = "Tukey"))
+summary(tukeyp)
+plot(tukeyp)
+
+```
+
+
+```{r}
+dat<-read.table("../ProcessedData/all_gly_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+glyalt<-data.frame('value'=c(dat[,'dr_gly'],dat[,'c_gly'],dat[,'hs_gly']),'treatment'=rep(c('dr','c', 'hs'),each=nrow(dat)), 'RIL'=rep(c(dat[,'RIL'])))
+
+glyalt<- glyalt%>% mutate(treatment=fct_inorder(glyalt$treatment, ordered=NA))
+
+p4a<-ggplot(data=glyalt, aes(x = treatment, y=value, color=as.factor(RIL))) +
+  geom_point()+
+  geom_line(aes(group = paste(as.factor(RIL)), alpha = 0.2))+
+  theme(legend.position="none")+
+  ylab("amount (mg/fly)")+
+  stat_summary(fun.y = mean, geom = "point", size = 3, color = "black")
+
+p4a
+ggsave(p4a, file='gly_amt.pdf',width=8, height=4)
+
+glylm<-lm(value~ treatment, data=glyalt)
+summary(glylm)
+anova(glylm)
+
+tukeyg<- glht(glylm, linfct = mcp(treatment = "Tukey"))
+summary(tukeyg)
+plot(tukeyg)
+```
+
+write.table(Control, "Control_tot_acq.txt", sep="\t")
+write.table(DietRes, "DR_tot_acq.txt", sep="\t")
+write.table(HighSugar, "HS_tot_acq.txt", sep="\t")

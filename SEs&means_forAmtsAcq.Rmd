@@ -1,0 +1,78 @@
+---
+title: "SEs&means"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(readxl)
+library(cowplot)
+library(forcats)
+library(car)
+library(Hmisc)
+library(multcomp)
+stat_sum_df <- function(fun, geom="crossbar", ...) {
+  stat_summary(fun.data=fun, colour="red", geom=geom, width=0.2, ...)
+}
+```
+
+```{r}
+dat<-read.table("../ProcessedData/all_carb_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+#standard error (SE) and means
+mean(dat$dr_carb, na.rm=TRUE)
+sd(dat$dr_carb, na.rm=TRUE)/sqrt(length(dat$dr_carb[!is.na(dat$dr_carb)]))#Std error
+
+mean(dat$c_carb, na.rm=TRUE)
+sd(dat$c_carb, na.rm=TRUE)/sqrt(length(dat$c_carb[!is.na(dat$c_carb)]))  #Standard error
+
+mean(dat$hs_carb, na.rm=TRUE)
+sd(dat$hs_carb, na.rm=TRUE)/sqrt(length(dat$hs_carb[!is.na(dat$hs_carb)]))  #Std error
+
+```
+
+
+```{r}
+dat<-read.table("../ProcessedData/all_lip_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+mean(dat$dr_lip, na.rm=TRUE)
+sd(dat$dr_lip, na.rm=TRUE)/sqrt(length(dat$dr_lip[!is.na(dat$dr_lip)]))#Std error
+
+mean(dat$c_lip, na.rm=TRUE)
+sd(dat$c_lip, na.rm=TRUE)/sqrt(length(dat$c_lip[!is.na(dat$c_lip)]))  #Standard error
+
+mean(dat$hs_lip, na.rm=TRUE)
+sd(dat$hs_lip, na.rm=TRUE)/sqrt(length(dat$hs_lip[!is.na(dat$hs_lip)]))  #Std error
+```
+
+
+```{r}
+dat<-read.table("../ProcessedData/all_prot_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+mean(dat$dr_prot, na.rm=TRUE)
+sd(dat$dr_prot, na.rm=TRUE)/sqrt(length(dat$dr_prot[!is.na(dat$dr_prot)]))#Std error
+
+mean(dat$c_prot, na.rm=TRUE)
+sd(dat$c_prot, na.rm=TRUE)/sqrt(length(dat$c_prot[!is.na(dat$c_prot)]))  #Standard error
+
+mean(dat$hs_prot, na.rm=TRUE)
+sd(dat$hs_prot, na.rm=TRUE)/sqrt(length(dat$hs_prot[!is.na(dat$hs_prot)]))  #Std error
+```
+
+```{r}
+dat<-read.table("../ProcessedData/all_gly_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+mean(dat$dr_gly, na.rm=TRUE)
+sd(dat$dr_gly, na.rm=TRUE)/sqrt(length(dat$dr_gly[!is.na(dat$dr_gly)]))#Std error
+
+mean(dat$c_gly, na.rm=TRUE)
+sd(dat$c_gly, na.rm=TRUE)/sqrt(length(dat$c_gly[!is.na(dat$c_gly)]))  #Standard error
+
+mean(dat$hs_gly, na.rm=TRUE)
+sd(dat$hs_gly, na.rm=TRUE)/sqrt(length(dat$hs_gly[!is.na(dat$hs_gly)]))  #Std error
+```
+

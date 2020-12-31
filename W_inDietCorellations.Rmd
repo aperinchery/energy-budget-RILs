@@ -1,0 +1,396 @@
+---
+title: "ProtienVsMass"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readxl)
+library(cowplot)
+library(ggplot2)
+library(ggpubr)
+library(dplyr)
+library(plyr)
+setwd("C:/Users/Anna/Dropbox/AMP_EGK/Projects/Ch1_RILs/Scripts")
+```
+
+```{r cars}
+all_molec<-read.table("../ProcessedData/all_flies_proccessed_checked.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+all_molec$RIL<-gsub("[^[:digit:]]", "", all_molec$Line)#Make RIL column
+all_molec$Treat<-gsub("[[:digit:]]","",all_molec$Line)#Make Treatment column
+whole.dat<-all_molec[complete.cases(all_molec), ] #columns w NA removed. 
+
+```
+all_molec_w_plates<-read.table("../ProcessedData/all_molec_w_plate.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE) #this has also removed anything that has NA's in it. Includes all other misc info.
+
+all_molec<-select(all_molec_w_plates, Line, PLATE, RIL, Treat, c_perfly.y, g_perfly.y, p_perfly.y, lperfly.y)
+
+all_molec<-rename(all_molec_w_plt, c("c_perfly.y"="c_perfly", "g_perfly.y"="g_perfly", "p_perfly.y"="p_perfly", "lperfly.y"="lperfly"))
+
+
+whole.dat<-all_molec[complete.cases(all_molec), ] #columns w NA removed. 
+
+```{r}
+which(all_molec$c_perfly<.01)
+which(all_molec$c_perfly>.01 & all_molec$c_perfly<.1)
+which(all_molec$c_perfly<.1)
+```
+
+
+```{r}
+a <- prcomp(~ c_perfly + lperfly +p_perfly, data = whole.dat, center = TRUE, scale. = TRUE)
+summary(a)
+print(a)
+
+b <- prcomp(~ c_perfly + lperfly +p_perfly+ g_perfly, data = whole.dat, center = TRUE, scale. = TRUE)
+summary(b)
+print(b)
+
+PCBi<-data.frame(b$x,Treatment=whole.dat$Treat)
+
+
+ggplot(PCBi,aes(x=PC1,y=PC2,col=Treatment))+
+   geom_point(size=1,alpha=0.5)+ 
+   theme_classic()
+
+#ggplot(PCBj,aes(x=PC1,y=PC2,col=Plate))+
+   geom_point(size=1,alpha=0.5)+ 
+   theme_classic()
+
+v <- prcomp(~ c_perfly + lperfly, data = whole.dat, center = TRUE, scale. = TRUE)
+summary(v)
+print(v)
+
+w <- prcomp(~ c_perfly + g_perfly, data = whole.dat, center = TRUE, scale. = TRUE)
+summary(w)
+print(w)
+```
+
+
+```{r}
+C_diet<-subset(all_molec, Treat=="C")
+DR_diet<-subset(all_molec, Treat=="DR")
+HS_diet<-subset(all_molec, Treat=="HS")
+
+
+control_pca <- prcomp(~ c_perfly + lperfly +p_perfly+ g_perfly, data = C_diet, center = TRUE, scale. = TRUE)
+summary(control_pca)
+print(control_pca)
+
+biplot(control_pca)
+PCB_control<-data.frame(control_pca$x,Treatment=whole.dat$Treat)
+
+#Control diet PCA
+
+PC_control <- data.frame(pc1 = control_pca$x[, 1],
+                 pc2 = control_pca$x[, 2],
+                 pc3 = control_pca$x[, 3],
+                 pc4 = control_pca$x[, 4])
+PC_control
+
+pc_control_plot <- ggplot(PC_control, aes(pc1, pc2, pc3, pc4)) +
+  geom_vline(xintercept = 0, color = "red", size = 1.5) +
+  geom_hline(yintercept = 0, color = "red", size = 1.5) +
+  geom_point() +
+  coord_fixed()
+print(pc_control_plot)
+
+```
+
+```{r}
+dr_pca <- prcomp(~ c_perfly + lperfly +p_perfly+ g_perfly, data = DR_diet, center = TRUE, scale. = TRUE)
+summary(dr_pca)
+print(dr_pca)
+```
+
+##High Sugar PCA
+```{r}
+hs_pca <- prcomp(~ c_perfly + lperfly +p_perfly+ g_perfly, data = HS_diet, center = TRUE, scale. = TRUE)
+summary(hs_pca)
+print(hs_pca)
+```
+
+
+ctl_pca_a<- prcomp(~ c_perfly + lperfly +p_perfly, data = C_diet, center = TRUE, scale. = TRUE)
+summary(ctl_pca_a)
+print(ctl_pca_a)
+
+dr_pca_a<- prcomp(~ c_perfly + lperfly +p_perfly, data = DR_diet, center = TRUE, scale. = TRUE)
+summary(dr_pca_a)
+print(dr_pca_a)
+
+hs_pca_a<- prcomp(~ c_perfly + lperfly +p_perfly, data = HS_diet, center = TRUE, scale. = TRUE)
+summary(hs_pca_a)
+print(hs_pca_a)
+##Dietary Restriction PCA
+
+
+#also make biplots
+
+##find the correlations value
+pairs(all_carb[, -1], gap=0,pch=".")
+carb_pfly<-all_molec$c_perfly
+prot_pfly<-all_molec$p_perfly
+cor(carb_pfly,prot_pfly)
+cor(prot_pfly,carb_pfly)
+
+```{r pressure, echo=FALSE}
+
+c_g<-ggplot(all_molec, aes(c_perfly, g_perfly )) + geom_point()
+cor.test(x=all_molec$c_perfly, y=all_molec$g_perfly, method = "pearson")
+c_g<-(c_g + ggtitle("overall: glycogen by carboydrate"))
+c_g<-ggscatter(all_molec, x = "c_perfly", y = "g_perfly", add = "reg.line", conf.int = TRUE, cor.coef = TRUE, cor.method = "pearson") #.014
+#ggsave(c_g, file='../ProcessedData/CorrelationPlots/overall_c_g.png')
+
+
+c_p<-ggplot(all_molec, aes(c_perfly, p_perfly )) + geom_point()
+cor.test(all_molec$c_perfly, all_molec$p_perfly,  method = "pearson")
+c_p<-(c_p + ggtitle("overall: protein by carboydrate"))
+c_p<-ggscatter(all_molec, x = "c_perfly", y = "p_perfly", add = "reg.line", conf.int = TRUE, cor.coef = TRUE, cor.method = "pearson") #.1987
+#ggsave(c_p, file='../ProcessedData/CorrelationPlots/overall_c_p.png')
+
+c_l<-ggplot(all_molec, aes(c_perfly, lperfly )) + geom_point()
+c_l<-(c_l + ggtitle("overall: lipid by carboydrate"))
+cor.test(all_molec$c_perfly, all_molec$lperfly,  method = "pearson")
+c_l<-ggscatter(all_molec, x = "c_perfly", y = "lperfly", add = "reg.line", conf.int = TRUE, cor.coef = TRUE, cor.method = "pearson")#.3553
+##ggsave(c_l, file='../ProcessedData/CorrelationPlots/overall_c_l.png')
+
+g_p<-ggplot(all_molec, aes(g_perfly, p_perfly )) + geom_point()
+g_p<-(g_p + ggtitle("overall: glycogen by protien"))
+cor.test(all_molec$g_perfly, all_molec$p_perfly,  method = "pearson")
+g_p<-ggscatter(all_molec, x = "g_perfly", y = "p_perfly", add = "reg.line", conf.int = TRUE, cor.coef = TRUE, cor.method = "pearson") #-.0498
+#ggsave(g_p, file='../ProcessedData/CorrelationPlots/overall_g_p.png')
+
+
+g_l<-ggplot(all_molec, aes(g_perfly, lperfly )) + geom_point()
+g_l<-(g_l + ggtitle("overall: glycogen by lipid"))
+#ggsave(g_l, file='../ProcessedData/CorrelationPlots/overall_g_l.png')
+cor.test(all_molec$g_perfly, all_molec$lperfly,  method = "pearson")#-.08
+g_l<-ggscatter(all_molec, x = "g_perfly", y = "lperfly", add = "reg.line", conf.int = TRUE, cor.coef = TRUE, cor.method = "pearson")
+
+
+g_c<-ggplot(all_molec, aes(g_perfly, c_perfly )) + geom_point()
+g_c<-(g_c + ggtitle("overall: glycogen by carbohydrate"))
+#ggsave(g_c, file='../ProcessedData/CorrelationPlots/overall_g_c.png')
+cor.test(all_molec$g_perfly, all_molec$c_perfly,  method = "pearson") #.014
+g_c<-ggscatter(all_molec, x = "g_perfly", y = "c_perfly", add = "reg.line", conf.int = TRUE, cor.coef = TRUE, cor.method = "pearson")
+
+l_g<-ggplot(all_molec, aes(lperfly, g_perfly )) + geom_point()
+l_g<-(l_g + ggtitle("overall: lipid by glycogen"))
+#ggsave(l_g, file='../ProcessedData/CorrelationPlots/overall_l_g.png')
+cor.test(all_molec$lperfly, all_molec$g_perfly,  method = "pearson") #-.0842
+l_g<-ggscatter(all_molec, x = "lperfly", y = "g_perfly", add = "reg.line", conf.int = TRUE, cor.coef = TRUE, cor.method = "pearson")
+
+
+l_p<-ggplot(all_molec, aes(lperfly, p_perfly )) + geom_point()
+l_p<-(l_p + ggtitle("overall: lipid by protien"))
+#ggsave(l_p, file='../ProcessedData/CorrelationPlots/overall_l_p.png')
+cor.test(all_molec$lperfly, all_molec$p_perfly,  method = "pearson")#.339
+l_p<-ggscatter(all_molec, x = "lperfly", y = "p_perfly", add = "reg.line", conf.int = TRUE, cor.coef = TRUE, cor.method = "pearson")
+#
+
+l_c<-ggplot(all_molec, aes(lperfly, c_perfly )) + geom_point()
+l_c<-(l_c + ggtitle("overall: lipid by carbohydrate"))
+#ggsave(l_c, file='../ProcessedData/CorrelationPlots/overall_l_c.png')
+cor.test(all_molec$lperfly, all_molec$c_perfly,  method = "pearson") #.3553
+l_c<-ggscatter(all_molec, x = "lperfly", y = "c_perfly", add = "reg.line", conf.int = TRUE, cor.coef = TRUE, cor.method = "pearson")
+```
+
+```{r}
+plot_grid(c_g, c_p, c_l, g_c, g_p, g_l, l_c, l_p, l_g)
+```
+
+
+#treatment
+```{r}
+
+AvgTab<-read.table("../ProcessedData/all_flies_proccessed_checked.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+first<-AvgTab[1:6,]
+
+AvgTab$RIL<-gsub("[^[:digit:]]", "", AvgTab$Line)#Make RIL column
+AvgTab$Treat<-gsub("[[:digit:]]","",AvgTab$Line)#Make Treatment column
+
+C_diet<-subset(AvgTab, Treat=="C")
+DR_diet<-subset(AvgTab, Treat=="DR")
+HS_diet<-subset(AvgTab, Treat=="HS")
+
+ggplot(C_diet, aes(c_perfly, g_perfly )) + geom_point()
+ggplot(C_diet, aes(c_perfly, p_perfly )) + geom_point()
+ggplot(C_diet, aes(c_perfly, lperfly )) + geom_point()
+
+ggplot(DR_diet, aes(c_perfly, g_perfly )) + geom_point()
+ggplot(DR_diet, aes(c_perfly, p_perfly )) + geom_point()
+ggplot(DR_diet, aes(c_perfly, lperfly )) + geom_point()
+
+ggplot(HS_diet, aes(c_perfly, g_perfly )) + geom_point()
+ggplot(HS_diet, aes(c_perfly, p_perfly )) + geom_point()
+ggplot(HS_diet, aes(c_perfly, lperfly )) + geom_point()
+```
+
+The Pearson product-moment correlation coefficient (or Pearson correlation coefficient, for short) is a measure of the strength of a linear association between two variables and is denoted by r. Basically, a Pearson product-moment correlation attempts to draw a line of best fit through the data of two variables, and the Pearson correlation coefficient, r, indicates how far away all these data points are to this line of best fit (i.e., how well the data points fit this new model/line of best fit).
+https://statistics.laerd.com/statistical-guides/pearson-correlation-coefficient-statistical-guide.php
+
+Strength 
+of Association	Positive	Negative
+Small	          .1 to .3	-0.1 to -0.3
+Medium	        .3 to .5	-0.3 to -0.5
+Large	          .5 to 1.0	-0.5 to -1.0
+
+```{r}
+ggplot(C_diet, aes(lperfly, c_perfly)) + geom_point()
+cor.test(C_diet$lperfly, C_diet$c_perfly,  method = "pearson") #.2778
+
+ggplot(DR_diet, aes(lperfly, c_perfly)) + geom_point()
+cor.test(DR_diet$lperfly, DR_diet$c_perfly,  method = "pearson") #.47
+
+ggplot(HS_diet, aes(lperfly, c_perfly )) + geom_point()
+cor.test(HS_diet$lperfly, HS_diet$c_perfly,  method = "pearson") # .311 not ...=#.131
+
+
+ctrl_l_p<-ggplot(C_diet, aes(lperfly,p_perfly )) + geom_point()
+cor.test(C_diet$lperfly, C_diet$p_perfly,  method = "pearson") #.393
+ctrl_l_p<-(ctrl_l_p + ggtitle("control diet: lipid by protein"))
+ctrl_l_p
+ggsave(ctrl_l_p, file='../ProcessedData/CorrelationPlots/ctl_l_p.png')
+
+dr_l_p<-ggplot(DR_diet, aes(p_perfly, lperfly )) + geom_point()
+cor.test(DR_diet$lperfly, DR_diet$p_perfly,  method = "pearson")#.326
+dr_l_p<-(dr_l_p + ggtitle("dietary restriction: lipid by protein"))
+ggsave(dr_l_p, file='../ProcessedData/CorrelationPlots/dr_l_p.png')
+
+hs_l_p<-ggplot(HS_diet, aes(p_perfly, lperfly )) + geom_point()
+cor.test(HS_diet$lperfly, HS_diet$p_perfly,  method = "pearson") #.305
+hs_l_p<-(hs_l_p + ggtitle("high sugar: lipid by protein"))
+ggsave(hs_l_p, file='../ProcessedData/CorrelationPlots/hs_l_p.png')
+
+```
+
+
+
+
+??Delete this??
+```{r}
+#read in table
+setwd("C:/Users/Anna/Dropbox/AMP_EGK/Projects/Ch1_RILs/Scripts")
+
+dat<-read.table("../RawData/Combined/massteset.txt",sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+c_std<-read.table("../RawData/StdCurves/carbstdcurvev4.txt",sep="\t",header=TRUE,stringsAsFactors=FALSE)
+g_std<-read.table("../RawData/StdCurves/glystdcurvev4.txt",sep="\t",header=TRUE,stringsAsFactors=FALSE)
+p_std<-read.table("../RawData/StdCurves/protienstdcurvev5.txt",sep="\t",header=TRUE,stringsAsFactors=FALSE)
+l525_std<-read.table("../RawData/StdCurves/lipid525stdcurvev6.txt",sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+#avgstdc<-read.table("../RawData/StdCurves/c_standardcurve",sep="\t",header=TRUE,stringsAsFactors=FALSE)
+#avgstdg<-read.table("../RawData/StdCurves/g_standardcurve",sep="\t",header=TRUE,stringsAsFactors=FALSE)
+avgstdl525<-read.table("../RawData/StdCurves/l525_standardcurve",sep="\t",header=TRUE,stringsAsFactors=FALSE)
+#avgstdp<-read.table("../RawData/StdCurves/p_standardcurve",sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+
+#add treatmet and RIL column
+dat$RIL<-as.numeric(gsub("[^[:digit:]]", "", dat$Line))#Make RIL column
+dat$Treat<-gsub("[[:digit:]]","",dat$Line)#Make Treatment column
+
+which(dat$RIL>2000)
+#loop for carbohydrates
+carbohydrates<-data.frame("amount"=numeric(length=0), "line"=numeric(length=0), "diet"=character(length=0), "plate"=character(length=0), "flies"=character(length=0), stringsAsFactors=FALSE)
+
+for (plateid in unique(dat$PLATE))
+{
+  std.c<-subset(c_std, PLATE== plateid)
+  star<-lm(abs~amount, data=c_std)
+  plate.s<-subset(dat,PLATE== plateid)
+  workwork<-(plate.s$CARB625-star$coefficients[1])/star$coefficients[2]
+  carbohydrates.s<-data.frame("amount"=workwork, "line"=plate.s$RIL, "diet"=plate.s$Treat, "plate"=plate.s$PLATE, "flies"=plate.s$FLIES, stringsAsFactors=FALSE)
+  carbohydrates<-rbind(carbohydrates, carbohydrates.s)
+}
+#calculate amount per fly.
+dat$c_perfly<-(carbohydrates$amount*(150/1400))/(carbohydrates$flies)
+
+#GLYCOGEN
+glycogen<-data.frame("amount"=numeric(length=0), "line"=numeric(length=0), "diet"=character(length=0), "plate"=character(length=0), "flies"=character(length=0), stringsAsFactors=FALSE)
+
+for (plateid in unique(dat$PLATE))
+{
+  std.g<-subset(g_std, PLATE== plateid)
+  star<-lm(abs~amount, data=c_std)
+  plate.s<-subset(dat,PLATE== plateid)
+  workwork<-(plate.s$GLY625-star$coefficients[1])/star$coefficients[2]
+  glycogen.s<-data.frame("amount"=workwork, "line"=plate.s$RIL, "diet"=plate.s$Treat, "plate"=plate.s$PLATE, "flies"=plate.s$FLIES, stringsAsFactors=FALSE)
+  glycogen<-rbind(glycogen, glycogen.s)
+}
+
+#calculate amount per fly.
+dat$g_perfly<-(glycogen$amount*(150/1000))/(glycogen$flies)
+
+###loop for lipids
+lipids525<-data.frame("amount"=numeric(length=0), "line"=numeric(length=0), "diet"=character(length=0), "plate"=character(length=0), "flies"=character(length=0), stringsAsFactors=FALSE)
+
+for (plateid in unique(dat$PLATE))
+{
+  #std.p<-subset(p_std, PLATE== plateid)
+  std.l525<-avgstdl525
+  star<-lm(abs~amount, data=l525_std)
+  plate.s<-subset(dat,PLATE== plateid)
+  workwork<-(plate.s$LIP525-star$coefficients[1])/star$coefficients[2]
+  lipids525.s<-data.frame("amount"=workwork, "line"=plate.s$RIL, "diet"=plate.s$Treat, "plate"=plate.s$PLATE, "flies"=plate.s$FLIES, stringsAsFactors=FALSE)
+  lipids525<-rbind(lipids525, lipids525.s)
+}
+
+#calculate amount per fly.
+dat$lperfly<-(lipids525$amount*(100/1400))/(lipids525$flies)
+
+
+###loop for protiens
+protiens<-data.frame("amount"=numeric(length=0), "line"=numeric(length=0), "diet"=character(length=0), "plate"=character(length=0), "flies"=character(length=0), stringsAsFactors=FALSE)
+
+for (plateid in unique(dat$PLATE))
+{
+  std.p<-subset(p_std, PLATE== plateid)
+  star<-lm(abs~amount, data=p_std)
+  plate.s<-subset(dat,PLATE== plateid)
+  workwork<-(plate.s$PROT595-star$coefficients[1])/star$coefficients[2]
+  protiens.s<-data.frame("amount"=workwork, "line"=plate.s$RIL, "diet"=plate.s$Treat, "plate"=plate.s$PLATE, "flies"=plate.s$FLIES, stringsAsFactors=FALSE)
+  protiens<-rbind(protiens, protiens.s)
+}
+
+###calculate protien amount per fly.
+dat$p_perfly<-(protiens$amount*(2/180))/(protiens$flies)
+
+which(dat$RIL>2000)
+dat$RIL[which(dat$RIL>2000)]<-dat$RIL[which(dat$RIL>2000)]-22000
+##remove the 22000 from 'Line' here
+#which(data$Line>2000)
+
+write.table(dat, "masstesting.txt", sep="\t")
+
+```
+
+test<-cbind(masstest[,14],masstest[,14],masstest[,18])
+ggplot(masstest, aes(PROTCONC, MASS)) + geom_point()
+mass_perfly<-masstest[,14],masstest[,18]
+
+
+THIS IS WHERE THE MASSES START!!!
+
+```{r}
+masstest<-read.table("Processed_perflyconc_wMass.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+masstest$m_perfly<- masstest$MASS/masstest$FLIES
+
+mass_pfly1<-ggplot(masstest, aes(p_perfly, m_perfly )) + geom_point()
+mass_pfly2<-ggplot(masstest, aes(m_perfly, p_perfly )) + geom_point()
+
+which(masstest$p_perfly >.005) #2 values
+masstest$p_perfly[masstest$p_perfly >.005] <- NA
+masstest$m_perfly[masstest$m_perfly >.005] <- NA
+
+mass_pfly1<-ggplot(masstest, aes(p_perfly, m_perfly )) + geom_point()
+mass_pfly2<-ggplot(masstest, aes(m_perfly, p_perfly )) + geom_point()
+
+mass_pfly1
+mass_pfly2
+```
+
+

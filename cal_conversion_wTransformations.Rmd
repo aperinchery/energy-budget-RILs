@@ -1,0 +1,102 @@
+---
+title: "CalorieConversion"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readxl)
+library(cowplot)
+library(ggplot2)
+library(ggpubr)
+library(dplyr)
+
+#carb<-read.table("../ProcessedData/all_carb_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+#lip<-read.table("../ProcessedData/all_lip_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+#prot<-read.table("../ProcessedData/all_prot_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+#gly<-read.table("../ProcessedData/all_gly_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+###transformed
+gly<-read.table("../ProcessedData/glycogen_transform.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+carb<-read.table("../ProcessedData/carbs_transform.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+lip<-read.table("../ProcessedData/lipid_transform.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+prot<-read.table("../ProcessedData/prot_transform.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+```
+carb<-read.table("../ProcessedData/all_carb.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+gly<-read.table("../ProcessedData/all_gly.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+prot<-read.table("../ProcessedData/all_prot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+lip<-read.table("../ProcessedData/all_lip.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+
+###This is in kilocalorie!!!
+
+```{r}
+carb$c_carb_cal<-carb[,2]*1.6
+carb$dr_carb_cal<-carb[,3]*1.6
+carb$hs_carb_cal<-carb[,4]*1.6
+```
+
+```{r}
+lip$c_lip_cal<-lip[,2]*8
+lip$dr_lip_cal<-lip[,3]*8
+lip$hs_lip_cal<-lip[,4]*8
+```
+
+
+```{r}
+prot$c_prot_cal<-prot[,2]*3.9
+prot$dr_prot_cal<-prot[,3]*3.9
+prot$hs_prot_cal<-prot[,4]*3.9
+```
+
+check glycogen
+```{r}
+gly$c_gly_cal<-gly[,2]*1.6
+gly$dr_gly_cal<-gly[,3]*1.6
+gly$hs_gly_cal<-gly[,4]*1.6
+```
+
+##KILO CALORIE conversion on transformed data
+```{r}
+write.table(prot, "../ProcessedData/prot_cal.txt", sep="\t")
+write.table(carb, "../ProcessedData/carb_cal.txt", sep="\t")
+write.table(gly, "../ProcessedData/gly_cal.txt", sep="\t")
+write.table(lip, "../ProcessedData/lip_cal.txt", sep="\t")
+
+```
+
+Caloric content of phytoplankton (1973)
+Authors TREVOR PLATT, BRIAN IRWIN used 
+(Prosser  and  Brown 1961)  :  for  protein  4.19  cal  mg-l,  for  carbohydrate  4.2,  and  for  fat  9.5 
+
+#clear and rerun to test.
+```{r}
+carb<-read.table("../ProcessedData/carb_cal.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+lip<-read.table("../ProcessedData/lip_cal.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+prot<-read.table("../ProcessedData/prot_cal.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+gly<-read.table("../ProcessedData/gly_cal.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+control<-cbind('RIL'=carb[,1],'carb_cal'=carb[,5],'lip_cal'=lip[,5],'prot_cal'=prot[,5],'gly_cal'= gly[,5])
+
+tot_acq<-cbind(rowSums(control[,-1], na.rm=TRUE))
+
+Control<-cbind('RIL'=control[,1],'carb_cal'=control[,2],'lip_cal'=control[,3],'prot_cal'=control[,4],'gly_cal'= control[,5], 'tot_acq'=tot_acq[,1] )
+
+
+dr<-cbind('RIL'=carb[,1],'carb_cal'=carb[,6],'lip_cal'=lip[,6],'prot_cal'=prot[,6],'gly_cal'= gly[,6])
+tot_acq<-cbind(rowSums(dr[,-1], na.rm=TRUE))
+DietRes<-cbind('RIL'=dr[,1],'carb_cal'=dr[,2],'lip_cal'=dr[,3],'prot_cal'=dr[,4],'gly_cal'= dr[,5], 'tot_acq'=tot_acq[,1] )
+
+hs<-cbind('RIL'=carb[,1],'carb_cal'=carb[,7],'lip_cal'=lip[,7],'prot_cal'=prot[,7],'gly_cal'= gly[,7])
+tot_acq<-cbind(rowSums(hs[,-1], na.rm=TRUE))
+
+HighSugar<-cbind('RIL'=hs[,1],'carb_cal'=hs[,2],'lip_cal'=hs[,3],'prot_cal'=hs[,4],'gly_cal'= hs[,5], 'tot_acq'=tot_acq[,1] )
+```
+
+```{r}
+write.table(Control, "../ProcessedData/Control_tot_acq_transformed.txt", sep="\t")
+write.table(DietRes, "../ProcessedData/DR_tot_acq_transformed.txt", sep="\t")
+write.table(HighSugar, "../ProcessedData/HS_tot_acq_transformed.txt", sep="\t")
+```
+
